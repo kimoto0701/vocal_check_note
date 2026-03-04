@@ -1,0 +1,18 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project specific
+*.vcn
+*.wav
+*.mp3
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node modules (just in case)
+node_modules/

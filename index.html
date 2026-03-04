@@ -1,0 +1,301 @@
+﻿<!DOCTYPE html>
+<html lang="ja" data-theme="day">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="歌みたチェックノート - 歌い手とMIXエンジニア間のリテイク指示を効率化するWebツール">
+  <title>歌みたチェックノート - Vocal Check Note</title>
+  <link rel="stylesheet" href="style.css?v=14">
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- ==================== Header Bar ==================== -->
+    <header class="header-bar">
+      <div class="header-left">
+        <div class="app-logo">
+          <div class="app-logo-icon">🎤</div>
+          <h1 style="display: flex; align-items: baseline; gap: 8px;">歌みたチェックノート <span
+              style="font-size: 0.7rem; font-weight: 500; font-family: var(--font-mono); opacity: 0.8; letter-spacing: 0;">Vocal
+              Check Note</span></h1>
+        </div>
+
+        <div class="header-project-actions" style="display: none;">
+          <input type="text" id="project-name-input" aria-hidden="true" tabindex="-1">
+          <input type="file" id="vcn-import-input" accept=".vcn">
+        </div>
+      </div>
+
+      <div class="header-center"
+        style="display: flex; align-items: center; gap: var(--sp-6); position: absolute; left: 50%; transform: translateX(-50%);">
+        <button class="btn btn-play" id="play-btn" data-tooltip="再生/停止 (Space)" aria-label="再生/停止"
+          style="width: 40px; height: 40px; padding: 0; display:flex; justify-content:center; align-items:center;">▶</button>
+        <button class="btn btn-icon btn-secondary" id="stop-btn" data-tooltip="停止＆先頭" aria-label="停止して先頭へ"
+          style="width: 40px; height: 40px; padding: 0;">⏹</button>
+        <div class="time-display" id="time-display"
+          style="font-size: 1.25rem; font-weight: bold; font-family: var(--font-mono); color: var(--primary); min-width: 140px; text-align: center; background: var(--surface-active); padding: 4px 12px; border-radius: var(--radius-sm);">
+          00:00.0 / 00:00.0</div>
+      </div>
+
+      <div class="header-right" style="display: flex; align-items: center; gap: var(--sp-6);">
+        <button class="btn btn-sm btn-ghost" id="export-btn" data-tooltip="プロジェクトを保存 (.vcn)">💾 保存</button>
+        <button class="btn btn-sm btn-ghost" id="import-btn" data-tooltip="プロジェクトを読み込み (.vcn)">📂 読み込み</button>
+        <button class="btn btn-sm btn-primary" id="generate-guide-btn" style="padding: 4px 8px; font-size: 0.8rem;"
+          data-tooltip="MIX師への送付用テンプレ作成">📝 送付用テンプレ</button>
+        <div class="control-separator" style="width: 1px; height: 24px; background: var(--border);"></div>
+
+        <div class="autosave-indicator" id="autosave-indicator" style="display: none;">
+          <div class="autosave-dot"></div>
+          <span>自動保存済み</span>
+        </div>
+        <button class="btn btn-icon btn-secondary" id="theme-toggle" data-tooltip="テーマ切替"
+          style="font-size:1.2rem; padding:4px;">🌗</button>
+      </div>
+    </header>
+
+    <!-- ==================== Main Content ==================== -->
+    <main class="main-content">
+
+      <!-- === Top: Media Area === -->
+      <section class="media-area">
+
+        <!-- Waveform Panel -->
+        <div class="waveform-panel">
+          <div class="panel-header">
+            <div class="waveform-header-left">
+              <span class="panel-header-icon">〜</span>
+              波形トラック
+            </div>
+            <div class="waveform-header-right" style="display:flex; align-items:center; gap:var(--sp-4);">
+              <div class="zoom-control">
+                <label>ズーム</label>
+                <input type="range" id="zoom-slider" min="0" max="35" value="0" aria-label="波形のズーム">
+              </div>
+              <div class="seek-control" style="display:flex; align-items:center; gap:4px; margin-left:8px;">
+                <label style="font-size:0.75rem;">スキップ</label>
+                <input type="number" id="seek-step-input" min="1" max="10" value="5"
+                  style="width:40px; text-align:center; padding:2px; font-size: 0.8rem; border:1px solid var(--border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary);">
+                <span style="font-size:0.75rem;">秒</span>
+              </div>
+              <div class="toggle-control" style="display:flex; align-items:center; gap:4px; margin-left:8px;">
+                <input type="checkbox" id="wave-autoscroll-toggle" checked>
+                <label for="wave-autoscroll-toggle" style="font-size:0.75rem; cursor:pointer;"
+                  data-tooltip="再生中の波形を自動で追従します">波形追従</label>
+              </div>
+              <div class="offset-control" id="offset-control-group" style="display:none; margin-left:8px;">
+                <label>ズレ</label>
+                <input type="number" id="offset-value" value="0" step="10" aria-label="オフセット値 (ms)">
+                <span>ms</span>
+              </div>
+              <button class="btn btn-icon btn-secondary" id="collapse-media-btn" data-tooltip="折りたたむ"
+                style="margin-left: 8px; width:26px; height:26px; padding:0;">−</button>
+            </div>
+          </div>
+          <div class="waveform-tracks" id="waveform-tracks-container">
+            <div class="waveform-drop-zone global-drop-zone" id="global-drop-zone">
+              <span class="waveform-drop-zone-icon" id="drop-zone-icon">🎵</span>
+              <span id="drop-zone-text">音声ファイル（WAV/MP3）をドラッグ＆ドロップしてください</span>
+            </div>
+            <input type="file" id="global-file-input" accept=".wav,.mp3" class="visually-hidden">
+
+            <div id="dynamic-tracks" class="tracks-scroll-container">
+              <div id="tracks-inner-container" class="tracks-inner">
+                <div id="waveform-timeline" class="waveform-timeline"></div>
+                <div id="tracks-list" style="display:flex; flex-direction:column; flex:1;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Vertical Resizer -->
+      <div class="vertical-resizer" id="vertical-resizer"
+        style="height: 8px; cursor: row-resize; display: flex; justify-content: center; align-items: center; background: transparent; transition: background 0.2s; margin: -4px 0; z-index: 10;">
+        <div style="width: 40px; height: 3px; background: var(--border); border-radius: 2px;"></div>
+      </div>
+
+      <!-- === Middle: Work Area === -->
+      <section class="work-area">
+
+        <!-- Lyrics Panel -->
+        <div class="lyrics-panel">
+          <div class="panel-header">
+            <div class="panel-header-left" style="gap: var(--sp-6);">
+              <span class="panel-header-icon">📝</span>
+              <div class="lyrics-mode-tabs" id="lyrics-mode-tabs">
+                <button class="lyrics-mode-tab active" data-mode="edit" id="lyrics-tab-edit">歌詞セットモード</button>
+                <button class="lyrics-mode-tab" data-mode="list" id="lyrics-tab-list">チェックモード</button>
+              </div>
+              <button class="btn btn-sm btn-primary" id="lyrics-import-btn" style="margin-left: var(--sp-4);">🔍
+                歌詞セット</button>
+              <button class="btn btn-primary" id="stamp-btn"
+                style="display:none; margin-left: var(--sp-8); font-weight: bold; background-color: var(--warning); color: #000;">⏱
+                スタンプ(Enter)</button>
+            </div>
+            <div class="lyrics-header-right" style="display:flex; align-items:center; gap:var(--sp-4);">
+              <div class="toggle-control" id="lyrics-autoscroll-container"
+                style="display:none; align-items:center; gap:4px; margin-right: 8px;">
+                <input type="checkbox" id="lyrics-autoscroll-toggle" checked>
+                <label for="lyrics-autoscroll-toggle" style="font-size:0.75rem; cursor:pointer;"
+                  data-tooltip="再生箇所に合わせて自動でスクロールします">歌詞追従</label>
+              </div>
+              <span class="lyrics-count" id="lyrics-count" style="display: none;">0 行</span>
+              <button class="btn btn-icon btn-secondary" id="collapse-lyrics-btn" data-tooltip="折りたたむ"
+                style="margin-left: 8px; width:26px; height:26px; padding:0;">−</button>
+            </div>
+          </div>
+          <!-- Lyrics Import Textarea -->
+          <div class="lyrics-import-area" id="lyrics-import-area">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+            </div>
+            <textarea class="lyrics-import-textarea" id="lyrics-textarea"
+              placeholder="ここにコピーした歌詞を貼り付けて「歌詞セット」ボタンを押してください！"></textarea>
+            <div class="lyrics-import-actions" style="justify-content: space-between; width: 100%;">
+              <label
+                style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; color: var(--text-secondary); cursor: pointer;">
+                <input type="checkbox" id="split-space-checkbox" checked> 全角スペース（　）で改行する
+              </label>
+              <div style="display: flex; gap: var(--sp-4);">
+                <button class="btn btn-sm btn-ghost" id="lyrics-clear-btn">クリア</button>
+              </div>
+            </div>
+          </div>
+          <!-- Lyrics List View -->
+          <div class="lyrics-list-container unified-list" id="lyrics-list-container">
+            <div class="list-headers" id="list-headers">
+              <div class="col-lyric">歌詞・タイムライン</div>
+              <div class="resizer" id="resizer"></div>
+              <div class="col-memo">修正メモ</div>
+            </div>
+            <ul class="lyrics-list" id="lyrics-list"></ul>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ==================== Bottom: Control Bar ==================== -->
+    <footer class="control-bar" style="justify-content: space-between;">
+      <div class="control-left" style="display: flex; align-items: center; gap: var(--sp-6);">
+        <a href="https://x.com/piipipi_desu" target="_blank" rel="noopener noreferrer"
+          style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: var(--sp-4);">
+          <div class="creator-section" id="creator-section" style="gap: var(--sp-4);">
+            <div class="creator-icon-wrap" style="width:28px; height:28px;">
+              <img src="piipip.jpg" alt="ピーピP" class="creator-icon">
+            </div>
+            <span class="creator-name"
+              style="font-size: 0.75rem; font-weight: normal; display: flex; flex-direction: column; line-height: 1.2;">
+              <span style="font-size: 0.65rem; color: var(--text-tertiary);">作った人</span>
+              ピーピP
+            </span>
+            <div class="creator-bubble footer-bubble">
+              MIXのご相談お気軽に😊
+            </div>
+          </div>
+        </a>
+        <div style="display: flex; align-items: center; gap: 4px; color: var(--text-tertiary);">
+          <span style="font-size: 0.75rem;">インターネットに情報は送らないから安全だよ</span>
+        </div>
+      </div>
+      <div class="control-right" style="display:flex; align-items:center; gap:var(--sp-4);">
+        <button class="btn btn-sm btn-secondary" id="reset-all-btn" data-tooltip="すべてリセット">🗑 リセット</button>
+        <button class="btn btn-copy" id="copy-btn" data-tooltip="出力前にプレビューを確認">
+          📋 プレビュー＆コピー
+        </button>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Preview Modal -->
+  <div class="modal-overlay" id="preview-modal" style="display: none;">
+    <div class="modal preview-modal-content" style="width: 600px; max-width: 90vw;">
+      <h2>📋 コピーの内容プレビュー</h2>
+      <p style="margin-bottom: var(--sp-4); color: var(--text-secondary); font-size: 0.9rem;">
+        以下の内容をクリップボードにコピーします。ここで直接テキストをカスタマイズすることも可能です。</p>
+      <textarea id="preview-textarea"
+        style="width: 100%; height: 300px; padding: var(--sp-4); font-family: var(--font-mono); font-size: 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary); resize: vertical;"></textarea>
+      <div class="modal-actions"
+        style="margin-top: var(--sp-6); justify-content: flex-end; display: flex; gap: var(--sp-4);">
+        <button class="btn btn-secondary" id="preview-greeting-btn" style="margin-right: auto; font-size: 0.8rem;">✨
+          あいさつ追加</button>
+        <button class="btn btn-secondary" id="preview-cancel-btn">キャンセル</button>
+        <button class="btn btn-primary" id="preview-confirm-btn" style="font-weight: bold;">📝 コピーする</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome Modal -->
+  <div class="modal-overlay" id="welcome-modal" style="display: none;">
+    <div class="modal welcome-modal-content" style="width: 500px; max-width: 90vw; text-align: center;">
+      <h2 style="font-size: 1.5rem; margin-bottom: var(--sp-4);">🎤 歌みたチェックノート へようこそ <span
+          style="display:block; font-size: 0.8rem; font-weight: normal; color: var(--text-tertiary); margin-top: 4px; font-family: var(--font-mono);">Vocal
+          Check Note</span></h2>
+      <p style="margin-bottom: var(--sp-8); color: var(--text-secondary); font-size: 0.9rem;">
+        音声ファイルと歌詞（コピーでOK）を用意して、タイミング調整や修正メモを残そう！
+      </p>
+
+      <div style="margin-bottom: var(--sp-6); text-align: left;">
+        <label style="display:block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">音源ファイルを選択</label>
+        <div class="waveform-drop-zone" id="welcome-drop-zone" style="min-height: 100px;">
+          <span class="waveform-drop-zone-icon">📂</span>
+          <span>ドラッグ＆ドロップ、またはクリック</span>
+        </div>
+        <input type="file" id="welcome-file-input" accept=".wav,.mp3" class="visually-hidden">
+        <ul id="welcome-file-list" style="list-style: none; font-size: 0.8rem; margin-top: 8px; color: var(--primary);">
+        </ul>
+      </div>
+
+      <div style="margin-bottom: var(--sp-10); text-align: left;">
+        <label style="display:block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">プロジェクト名</label>
+        <div style="display: flex; gap: var(--sp-4); flex-direction: column;">
+          <input type="text" id="welcome-title-input" placeholder="例：新曲_ボーカルチェック"
+            style="width: 100%; padding: var(--sp-4) var(--sp-12); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-primary);">
+          <p style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">
+            ※保存時のファイル名に使用されます
+          </p>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="justify-content: center; display: flex; gap: var(--sp-4);">
+        <button class="btn btn-secondary" id="welcome-skip-btn">スキップ</button>
+        <button class="btn btn-primary" id="welcome-start-btn" style="font-weight: bold; padding: 12px 32px;">始める
+          🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lyric Selection Modal -->
+  <div class="modal-overlay" id="selection-modal" style="display: none;">
+    <div class="modal selection-modal-content" style="width: 500px; max-width: 90vw;">
+      <h2 style="margin-bottom: var(--sp-4);">🔍 歌詞ページへのリンク</h2>
+      <p style="margin-bottom: var(--sp-4); color: var(--text-secondary); font-size: 0.9rem;">
+        以下のサイトで歌詞が見つかりました。<br>
+        クリックして公式ページを開き、歌詞をコピーして貼り付けてください。
+      </p>
+      <ul id="selection-list"
+        style="list-style: none; padding: 0; max-height: 350px; overflow-y: scroll; border: 1px solid var(--border); border-radius: var(--radius-sm); margin: var(--sp-4) 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+        <!-- Candidates will be injected here -->
+      </ul>
+      <div class="modal-actions" style="margin-top: var(--sp-6); justify-content: flex-end; display: flex;">
+        <button class="btn btn-secondary" id="selection-cancel-btn">戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/wavesurfer.js@7"></script>
+  <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/timeline.min.js"></script>
+  <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/regions.min.js"></script>
+  <script src="app.js?v=13"></script>
+</body>
+
+</html>
