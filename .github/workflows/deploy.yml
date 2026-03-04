@@ -21,6 +21,8 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: /public_html/vocal_check_note/
+          exclude: |
+            **/*.js
 
       - name: 🧹 Purge Cloudflare Cache
         uses: jakejarvis/cloudflare-purge-action@master
