@@ -1,0 +1,8 @@
+# Allow .js files to be served
+<FilesMatch "\.js$">
+  Require all granted
+</FilesMatch>
+# Optional: deny execution of .bat files (just in case)
+<FilesMatch "\.bat$">
+  Require all denied
+</FilesMatch>
